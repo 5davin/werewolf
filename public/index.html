@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Werewolf</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Georgia', serif; background: #0d0d1a; color: #e8e0d0; min-height: 100vh; }
+  #app { max-width: 680px; margin: 0 auto; padding: 16px; }
+  h1 { text-align: center; font-size: 2rem; color: #c8a96e; text-shadow: 0 0 20px #c8a96e88; margin-bottom: 4px; }
+  .subtitle { text-align: center; color: #888; font-size: .85rem; margin-bottom: 20px; }
+  .card { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .card h2 { color: #c8a96e; font-size: 1.1rem; margin-bottom: 12px; }
+  input, select { width: 100%; padding: 10px 12px; background: #0d0d1a; border: 1px solid #3a3a5a; border-radius: 8px; color: #e8e0d0; font-size: .95rem; margin-bottom: 10px; }
+  input:focus { outline: none; border-color: #c8a96e; }
+  button { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: .95rem; font-weight: bold; transition: all .2s; }
+  .btn-primary { background: #c8a96e; color: #0d0d1a; width: 100%; margin-top: 4px; }
+  .btn-primary:hover { background: #e0c080; }
+  .btn-secondary { background: #2a2a4a; color: #e8e0d0; border: 1px solid #3a3a5a; }
+  .btn-secondary:hover { background: #3a3a5a; }
+  .btn-sm { padding: 6px 14px; font-size: .85rem; }
+  .role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .role-item { background: #0d0d1a; border: 1px solid #2a2a4a; border-radius: 8px; padding: 10px; }
+  .role-item label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: .9rem; }
+  .role-item input[type=checkbox] { width: auto; margin: 0; accent-color: #c8a96e; }
+  .role-count { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .role-count input { width: 50px; margin: 0; text-align: center; }
+  .player-list { list-style: none; }
+  .player-list li { background: #0d0d1a; border: 1px solid #2a2a4a; border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+  .player-badge { background: #c8a96e22; color: #c8a96e; border-radius: 4px; padding: 2px 8px; font-size: .75rem; }
+  .phase-banner { text-align: center; padding: 16px; border-radius: 12px; margin-bottom: 16px; font-size: 1.2rem; font-weight: bold; }
+  .phase-night { background: #0a0a1f; border: 1px solid #4444aa; color: #aaaaff; }
+  .phase-day { background: #1f1500; border: 1px solid #aa8800; color: #ffcc44; }
+  .role-reveal { text-align: center; padding: 24px; }
+  .role-reveal .role-big { font-size: 3rem; margin-bottom: 8px; }
+  .role-reveal .role-name { font-size: 1.4rem; color: #c8a96e; font-weight: bold; }
+  .role-reveal .role-desc { color: #aaa; font-size: .9rem; margin-top: 8px; line-height: 1.5; }
+  .action-area { background: #0d0d1a; border: 1px solid #3a3a5a; border-radius: 10px; padding: 16px; margin-top: 12px; }
+  .player-select-list { list-style: none; }
+  .player-select-list li { padding: 10px 14px; border: 1px solid #2a2a4a; border-radius: 8px; margin-bottom: 6px; cursor: pointer; transition: all .2s; display: flex; justify-content: space-between; align-items: center; }
+  .player-select-list li:hover { border-color: #c8a96e; background: #1a1a2e; }
+  .player-select-list li.selected { border-color: #c8a96e; background: #c8a96e22; }
+  .log { background: #0a0a15; border: 1px solid #2a2a4a; border-radius: 8px; padding: 12px; max-height: 220px; overflow-y: auto; }
+  .log-entry { padding: 4px 0; font-size: .85rem; border-bottom: 1px solid #1a1a2e; color: #bbb; }
+  .log-entry.important { color: #c8a96e; }
+  .log-entry.death { color: #cc4444; }
+  .log-entry.system { color: #7788ff; }
+  .vote-area .player-select-list li .vote-count { background: #c8a96e33; color: #c8a96e; border-radius: 4px; padding: 2px 8px; font-size: .8rem; }
+  .share-box { background: #0d0d1a; border: 1px solid #c8a96e44; border-radius: 8px; padding: 12px; display: flex; gap: 8px; align-items: center; }
+  .share-box input { margin: 0; flex: 1; font-size: .8rem; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #44cc44; display: inline-block; margin-right: 6px; }
+  .status-dot.dead { background: #cc4444; }
+  .msg-box { background: #1a1a2e; border-left: 3px solid #c8a96e; border-radius: 4px; padding: 10px 14px; margin: 10px 0; font-size: .9rem; line-height: 1.5; }
+  .msg-box.danger { border-left-color: #cc4444; }
+  .tab-bar { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tab { flex: 1; padding: 8px; text-align: center; background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 8px; cursor: pointer; font-size: .85rem; }
+  .tab.active { background: #c8a96e22; border-color: #c8a96e; color: #c8a96e; }
+  .waiting-dots::after { content: '...'; animation: dots 1.5s infinite; }
+  @keyframes dots { 0%,100%{content:'.'} 50%{content:'...'} 75%{content:'...'} }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #c8a96e44; border-top-color: #c8a96e; border-radius: 50%; animation: spin .8s linear infinite; margin-right: 6px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .win-screen { text-align: center; padding: 30px; }
+  .win-screen .win-icon { font-size: 4rem; margin-bottom: 12px; }
+  .win-screen h2 { font-size: 1.8rem; color: #c8a96e; margin-bottom: 8px; }
+  #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #c8a96e; color: #0d0d1a; padding: 10px 22px; border-radius: 20px; font-weight: bold; font-size: .9rem; display: none; z-index: 999; }
+  .night-waiting { text-align: center; padding: 20px; color: #7788ff; }
+  .actions-done { text-align: center; color: #44cc88; padding: 12px; font-size: .95rem; }
+  .role-tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: .8rem; font-weight: bold; }
+  .role-tag.werewolf { background: #8b202033; color: #ff6666; border: 1px solid #8b2020; }
+  .role-tag.villager { background: #20558b33; color: #66aaff; border: 1px solid #20558b; }
+  .role-tag.seer     { background: #55208b33; color: #cc88ff; border: 1px solid #55208b; }
+  .role-tag.doctor   { background: #208b4433; color: #66ff99; border: 1px solid #208b44; }
+  .role-tag.hunter   { background: #8b550033; color: #ffaa44; border: 1px solid #8b5500; }
+  .role-tag.witch    { background: #8b208b33; color: #ff88ff; border: 1px solid #8b208b; }
+  .config-notice { background: #2a1a00; border: 1px solid #c8a96e; border-radius: 10px; padding: 16px; margin-bottom: 16px; font-size: .9rem; line-height: 1.6; }
+  .config-notice code { background: #0d0d1a; padding: 2px 6px; border-radius: 4px; font-size: .85rem; color: #c8a96e; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+<script>
+// ─── CONFIGURATION ────────────────────────────────────────────────────────────
+// Replace these two values with your Upstash Redis credentials.
+// Get them from: https://console.upstash.com → your database → REST API tab
+const UPSTASH_URL   = 'REPLACE_WITH_YOUR_UPSTASH_URL';   // e.g. https://xxxx.upstash.io
+const UPSTASH_TOKEN = 'REPLACE_WITH_YOUR_UPSTASH_TOKEN'; // e.g. AXxxxx...
+
+const CONFIGURED = !UPSTASH_URL.startsWith('REPLACE') && !UPSTASH_TOKEN.startsWith('REPLACE');
+
+// ─── Upstash REST (called directly from browser — CORS enabled by Upstash) ───
+async function kvGet(key) {
+  const r = await fetch(`${UPSTASH_URL}/get/${encodeURIComponent(key)}`, {
+    headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` }
+  });
+  const j = await r.json();
+  return j.result ?? null;
+}
+async function kvSet(key, value) {
+  // SET key value EX 86400 — expires after 24h
+  await fetch(`${UPSTASH_URL}/set/${encodeURIComponent(key)}/${encodeURIComponent(value)}/ex/86400`, {
+    method: 'GET',   // Upstash supports pipeline via GET for simple commands
+    headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` }
+  });
+}
+
+async function loadRoom(id) {
+  try { const r = await kvGet('ww_' + id); return r ? JSON.parse(r) : null; } catch { return null; }
+}
+async function saveRoom(room) {
+  try { await kvSet('ww_' + room.id, JSON.stringify(room)); } catch(e) { console.error(e); }
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+const ROLE_INFO = {
+  werewolf: { icon:'🐺', name:'Werewolf', team:'evil',  desc:'Each night, secretly choose a villager to eliminate. Win when werewolves equal or outnumber villagers.' },
+  villager: { icon:'👨‍🌾', name:'Villager', team:'good',  desc:'You have no special power. Use logic and debate to find and vote out the werewolves!' },
+  seer:     { icon:'🔮', name:'Seer',     team:'good',  desc:'Each night, investigate one player to learn if they are a Werewolf or not.' },
+  doctor:   { icon:'💉', name:'Doctor',   team:'good',  desc:'Each night, protect one player (including yourself) from elimination.' },
+  hunter:   { icon:'🏹', name:'Hunter',   team:'good',  desc:'When eliminated, you may immediately take another player down with you.' },
+  witch:    { icon:'🧪', name:'Witch',    team:'good',  desc:'One Heal potion (save tonight\'s victim) and one Kill potion (eliminate anyone). Each used once.' },
+};
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let S = {
+  view:'home', roomId:null, playerId:null, playerName:null, isHost:false,
+  room:null, tab:'action', selectedTarget:null, witchKillTarget:null,
+  voteTarget:null, pollTimer:null,
+};
+
+// ─── Game Logic ───────────────────────────────────────────────────────────────
+function genId(n=6){ return Math.random().toString(36).substr(2,n).toUpperCase(); }
+function shuffle(a){ a=[...a]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+function alivePlayers(r){ return r.players.filter(p=>p.alive); }
+function addLog(room,msg,type='normal'){ room.log.unshift({msg,type,ts:Date.now()}); if(room.log.length>60)room.log.length=60; }
+
+function defaultRoom(hostId, hostName, roleConfig) {
+  return { id:genId(), phase:'lobby', round:0, hostId,
+    players:[{id:hostId,name:hostName,alive:true,role:null,hasActed:false}],
+    roleConfig, nightActions:{}, voteActions:{}, nightResult:null,
+    log:[], winner:null, hunterPending:null, witchHealUsed:false, witchKillUsed:false };
+}
+
+function assignRoles(room) {
+  const roles = shuffle(Object.entries(room.roleConfig).flatMap(([r,c])=>Array(c).fill(r)));
+  room.players.forEach((p,i)=>p.role=roles[i]||'villager');
+}
+
+function checkWin(room) {
+  const alive=alivePlayers(room), wolves=alive.filter(p=>p.role==='werewolf').length;
+  if(wolves===0) return 'villagers';
+  if(wolves>=alive.length-wolves) return 'werewolves';
+  return null;
+}
+
+function needsNightAction(room,p) {
+  if(!p.alive) return false;
+  if(p.role==='werewolf'||p.role==='seer'||p.role==='doctor') return true;
+  if(p.role==='witch') return !room.witchHealUsed||!room.witchKillUsed;
+  return false;
+}
+
+function processNight(room) {
+  const na=room.nightActions, byId=id=>room.players.find(p=>p.id===id);
+  const wfVotes={};
+  Object.values(na).filter(a=>a.type==='werewolf_kill').forEach(a=>{wfVotes[a.target]=(wfVotes[a.target]||0)+1;});
+  let killed=Object.keys(wfVotes).length?Object.entries(wfVotes).sort((a,b)=>b[1]-a[1])[0][0]:null;
+  const saved=Object.values(na).find(a=>a.type==='doctor_save')?.target;
+  const witchHeal=Object.values(na).find(a=>a.type==='witch_heal');
+  const witchKill=Object.values(na).find(a=>a.type==='witch_kill');
+  const seerAct=Object.values(na).find(a=>a.type==='seer_check');
+  if(witchHeal) room.witchHealUsed=true;
+  if(witchKill) room.witchKillUsed=true;
+  let seerResult=null;
+  if(seerAct){const t=byId(seerAct.target);seerResult={target:seerAct.target,name:t?.name,isWolf:t?.role==='werewolf',investigatorId:seerAct.actorId};}
+  let finalKilled=null;
+  if(killed&&saved!==killed&&witchHeal?.target!==killed){finalKilled=killed;const p=byId(killed);if(p){p.alive=false;addLog(room,`🌅 ${p.name} was found dead at dawn.`,'death');}}
+  else if(killed){addLog(room,`🌅 Miraculously, no one died last night.`,'important');}
+  else{addLog(room,`🌅 No one was killed last night.`,'important');}
+  let witchKilled=null;
+  if(witchKill){const p=byId(witchKill.target);if(p&&p.alive){p.alive=false;witchKilled=witchKill.target;addLog(room,`☠️ ${p.name} was poisoned!`,'death');}}
+  room.nightResult={killed:finalKilled,saved,witchKilled,seerResult};
+  const dead=[finalKilled,witchKilled].filter(Boolean);
+  const hd=dead.find(id=>byId(id)?.role==='hunter');
+  if(hd) room.hunterPending=hd;
+  room.nightActions={}; room.round++;
+}
+
+function processVotes(room) {
+  const counts={};
+  Object.values(room.voteActions).forEach(t=>{counts[t]=(counts[t]||0)+1;});
+  let max=0,top=[];
+  for(const[id,c] of Object.entries(counts)){if(c>max){max=c;top=[id];}else if(c===max)top.push(id);}
+  if(top.length!==1||top[0]==='skip'){addLog(room,`🗳️ Inconclusive vote. No one eliminated.`,'important');room.voteResult={tied:true};room.voteActions={};return;}
+  const p=room.players.find(x=>x.id===top[0]);
+  if(p){p.alive=false;addLog(room,`🗳️ ${p.name} (${ROLE_INFO[p.role]?.name}) was eliminated.`,'death');if(p.role==='hunter')room.hunterPending=p.id;}
+  room.voteResult={tied:false,eliminated:top[0]};room.voteActions={};
+}
+
+async function advancePhase(room) {
+  if(room.phase==='lobby'){assignRoles(room);addLog(room,`🌕 Game begins! Night falls...`,'system');room.phase='night_action';room.players.forEach(p=>p.hasActed=false);}
+  else if(room.phase==='night_action'){
+    const need=alivePlayers(room).filter(p=>needsNightAction(room,p));
+    if(!need.every(p=>p.hasActed)) return;
+    processNight(room);
+    const w=checkWin(room);if(w){room.winner=w;room.phase='ended';await saveRoom(room);return;}
+    if(room.hunterPending){room.phase='hunter_shot';await saveRoom(room);return;}
+    room.phase='day_announce';
+  }
+  else if(room.phase==='day_announce'){room.phase='day_vote';room.players.forEach(p=>p.hasActed=false);addLog(room,`☀️ Day Phase — vote!`,'system');}
+  else if(room.phase==='day_vote'){
+    if(!alivePlayers(room).every(p=>p.hasActed)) return;
+    processVotes(room);
+    const w=checkWin(room);if(w){room.winner=w;room.phase='ended';await saveRoom(room);return;}
+    if(room.hunterPending){room.phase='hunter_shot';await saveRoom(room);return;}
+    room.phase='night_action';room.round++;room.players.forEach(p=>p.hasActed=false);addLog(room,`🌕 Night falls again...`,'system');
+  }
+  await saveRoom(room);
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function render(){
+  const app=document.getElementById('app');app.innerHTML='';
+  if(!CONFIGURED){renderConfig(app);return;}
+  const v=S.view;
+  if(v==='home') renderHome(app);
+  else if(v==='create') renderCreate(app);
+  else if(v==='join') renderJoin(app);
+  else if(v==='lobby') renderLobby(app);
+  else if(v==='role_reveal') renderRoleReveal(app);
+  else if(v==='game') renderGame(app);
+  else if(v==='win') renderWin(app);
+}
+
+function renderConfig(el){
+  el.innerHTML=`<h1>🐺 Werewolf</h1>
+  <div class="config-notice">
+    <b style="color:#c8a96e">⚙️ Setup Required</b><br><br>
+    Open <code>index.html</code> and replace the two placeholders near the top:<br><br>
+    <code>UPSTASH_URL</code> → your Upstash REST URL<br>
+    <code>UPSTASH_TOKEN</code> → your Upstash REST token<br><br>
+    Get both from <b>console.upstash.com</b> → your database → <b>REST API</b> tab.
+  </div>`;
+}
+
+function renderHome(el){
+  el.innerHTML=`<h1>🐺 Werewolf</h1><p class="subtitle">A social deduction game</p>
+  <div class="card"><h2>Welcome!</h2><p style="color:#aaa;font-size:.9rem;margin-bottom:14px">Host a new game or join with a room code.</p>
+  <button class="btn-primary" onclick="goCreate()">🏠 Host a New Game</button>
+  <button class="btn-primary" style="margin-top:8px;background:#2a2a4a;color:#e8e0d0;border:1px solid #3a3a5a" onclick="goJoin()">🚪 Join a Room</button></div>`;
+}
+
+function renderCreate(el){
+  el.innerHTML=`<h1>🐺 Werewolf</h1><p class="subtitle">Set up your game</p>
+  <div class="card"><h2>Your Name</h2><input id="hostName" placeholder="Enter your name" maxlength="20"/></div>
+  <div class="card"><h2>Roles &amp; Counts</h2><div class="role-grid" id="roleGrid"></div></div>
+  <div class="card" style="text-align:center">
+    <button class="btn-primary" onclick="createRoom()">Create Room</button>
+    <button class="btn-secondary btn-sm" style="margin-top:8px" onclick="S.view='home';render()">← Back</button>
+  </div>`;
+  const grid=document.getElementById('roleGrid');
+  const defs={werewolf:2,villager:4,seer:1,doctor:1,hunter:1,witch:1};
+  Object.entries(ROLE_INFO).forEach(([role,info])=>{
+    const d=document.createElement('div');d.className='role-item';
+    d.innerHTML=`<label><input type="checkbox" id="chk_${role}" ${defs[role]?'checked':''}> <span>${info.icon}</span> ${info.name}</label>
+    <div class="role-count"><span style="font-size:.8rem;color:#888">×</span><input type="number" id="cnt_${role}" min="1" max="10" value="${defs[role]||1}" style="width:50px;margin:0;text-align:center"></div>`;
+    grid.appendChild(d);
+  });
+}
+
+function renderJoin(el){
+  const pre=new URLSearchParams(window.location.search).get('room')||'';
+  el.innerHTML=`<h1>🐺 Werewolf</h1><p class="subtitle">Join a game</p>
+  <div class="card">
+    <h2>Room Code</h2><input id="joinCode" placeholder="Room code" value="${pre}" style="text-transform:uppercase" maxlength="6"/>
+    <h2>Your Name</h2><input id="joinName" placeholder="Your name" maxlength="20"/>
+    <button class="btn-primary" onclick="joinRoom()">Join Room</button>
+    <button class="btn-secondary btn-sm" style="margin-top:8px" onclick="S.view='home';render()">← Back</button>
+  </div>`;
+  document.getElementById('joinCode').addEventListener('input',e=>e.target.value=e.target.value.toUpperCase());
+}
+
+function renderLobby(el){
+  const room=S.room;if(!room)return;
+  const total=Object.values(room.roleConfig).reduce((a,b)=>a+b,0);
+  const shareUrl=`${location.origin}/?room=${room.id}`;
+  el.innerHTML=`<h1>🐺 Werewolf</h1><p class="subtitle">Room: <b style="color:#c8a96e">${room.id}</b></p>
+  <div class="card"><h2>🔗 Share Link</h2>
+  <div class="share-box"><input id="shareLink" value="${shareUrl}" readonly><button class="btn-secondary btn-sm" onclick="copyLink()">Copy</button></div></div>
+  <div class="card"><h2>Players (${room.players.length}/${total})</h2>
+  <ul class="player-list">${room.players.map(p=>`<li><span class="status-dot"></span>${p.name}
+    ${p.id===room.hostId?'<span class="player-badge">Host</span>':''}
+    ${p.id===S.playerId?'<span class="player-badge" style="background:#c8a96e33;color:#c8a96e">You</span>':''}</li>`).join('')}</ul></div>
+  <div class="card"><h2>Roles</h2><div style="display:flex;flex-wrap:wrap;gap:8px">
+    ${Object.entries(room.roleConfig).map(([r,c])=>`<span class="role-tag ${r}">${ROLE_INFO[r].icon} ${ROLE_INFO[r].name} ×${c}</span>`).join('')}</div></div>
+  ${S.isHost
+    ?`<div class="card"><button class="btn-primary" onclick="startGame()" ${room.players.length<total?'disabled style="opacity:.5"':''}>
+      ${room.players.length<total?`Waiting (${room.players.length}/${total})...`:'🐺 Start Game'}</button></div>`
+    :`<div class="card" style="text-align:center;color:#888"><span class="spinner"></span>Waiting for host<span class="waiting-dots"></span></div>`}`;
+}
+
+function renderRoleReveal(el){
+  const room=S.room,me=room?.players.find(p=>p.id===S.playerId);if(!me)return;
+  const info=ROLE_INFO[me.role];
+  const wolves=me.role==='werewolf'?room.players.filter(p=>p.role==='werewolf'&&p.id!==S.playerId):[];
+  el.innerHTML=`<h1>🐺 Werewolf</h1><div class="card"><div class="role-reveal">
+  <div class="role-big">${info.icon}</div><div class="role-name">${info.name}</div>
+  <div class="role-desc">${info.desc}</div>
+  ${wolves.length?`<div class="msg-box danger" style="margin-top:12px;text-align:left">🐺 Fellow wolves: <b>${wolves.map(w=>w.name).join(', ')}</b></div>`:''}
+  </div><button class="btn-primary" onclick="S.view='game';render()">I'm Ready →</button></div>`;
+}
+
+function renderGame(el){
+  const room=S.room;if(!room)return;
+  if(room.winner){S.view='win';render();return;}
+  const me=room.players.find(p=>p.id===S.playerId);if(!me)return;
+  const isNight=room.phase==='night_action',isHunter=room.phase==='hunter_shot';
+  el.innerHTML=`<h1>🐺 Werewolf</h1>
+  <div class="phase-banner ${isNight||isHunter?'phase-night':'phase-day'}">
+    ${isNight?`🌕 Night — Round ${room.round}`:isHunter?`🏹 Hunter's Shot!`:`☀️ Day — Round ${room.round}`}
+  </div>
+  <div class="tab-bar">
+    <div class="tab ${S.tab==='action'?'active':''}" onclick="S.tab='action';render()">Action</div>
+    <div class="tab ${S.tab==='log'?'active':''}" onclick="S.tab='log';render()">Log</div>
+  </div><div id="tc"></div>`;
+  const tc=document.getElementById('tc');
+  if(S.tab==='log'){
+    tc.innerHTML=`<div class="card"><h2>Event Log</h2><div class="log">${room.log.map(l=>`<div class="log-entry ${l.type}">${l.msg}</div>`).join('')}</div></div>
+    <div class="card"><h2>Players</h2><ul class="player-list">${room.players.map(p=>`<li><span class="status-dot ${p.alive?'':'dead'}"></span>${p.name}${p.id===S.playerId?' (You)':''}${!p.alive?' ☠️':''}</li>`).join('')}</ul></div>`;
+    return;
+  }
+  if(!me.alive){tc.innerHTML=`<div class="card"><div class="msg-box danger">You've been eliminated. Watch the game...</div></div>`;return;}
+  if(isHunter&&room.hunterPending){
+    if(me.id===room.hunterPending){
+      tc.innerHTML=`<div class="card"><h2>🏹 Final Shot</h2><div class="msg-box danger">You were eliminated! Take one player with you.</div>
+      <div class="action-area"><ul class="player-select-list" id="targetList">${alivePlayers(room).filter(p=>p.id!==S.playerId).map(p=>`<li onclick="sel('${p.id}')" id="t_${p.id}">${p.name}</li>`).join('')}</ul></div>
+      <button class="btn-primary" onclick="submitHunter()">🏹 Shoot</button></div>`;
+    } else tc.innerHTML=`<div class="card"><div class="night-waiting">🏹 Hunter choosing<span class="waiting-dots"></span></div></div>`;
+    return;
+  }
+  if(isNight){
+    if(me.hasActed) tc.innerHTML=`<div class="card"><div class="actions-done">✅ Waiting for others<span class="waiting-dots"></span></div></div>`;
+    else renderNightAction(tc,room,me);
+    return;
+  }
+  if(room.phase==='day_announce'){
+    const nr=room.nightResult;
+    let h=`<div class="card"><h2>☀️ Morning</h2>`;
+    if(nr?.seerResult&&nr.seerResult.investigatorId===S.playerId)
+      h+=`<div class="msg-box">${nr.seerResult.isWolf?`🐺 ${nr.seerResult.name} IS a werewolf!`:`✅ ${nr.seerResult.name} is NOT a werewolf.`}</div>`;
+    h+=`<button class="btn-primary" style="margin-top:12px" onclick="ackDay()">Go to Vote →</button></div>`;
+    tc.innerHTML=h;return;
+  }
+  if(room.phase==='day_vote'){
+    if(me.hasActed) tc.innerHTML=`<div class="card"><div class="actions-done">✅ Vote cast. Waiting<span class="waiting-dots"></span></div></div>`;
+    else{
+      const counts={};Object.values(room.voteActions).forEach(t=>{counts[t]=(counts[t]||0)+1;});
+      tc.innerHTML=`<div class="card"><h2>🗳️ Vote</h2><div class="action-area"><ul class="player-select-list" id="voteList">
+      ${alivePlayers(room).filter(p=>p.id!==S.playerId).map(p=>`<li onclick="selVote('${p.id}')" id="v_${p.id}">${p.name}<span class="vote-count">${counts[p.id]||0}</span></li>`).join('')}
+      <li onclick="selVote('skip')" id="v_skip" style="color:#888">Skip<span class="vote-count">${counts['skip']||0}</span></li>
+      </ul></div><button class="btn-primary" onclick="submitVote()">Cast Vote</button></div>`;
+      if(S.voteTarget){const e=document.getElementById('v_'+S.voteTarget);if(e)e.classList.add('selected');}
+    }
+    return;
+  }
+}
+
+function renderNightAction(tc,room,me){
+  const role=me.role,alive=alivePlayers(room),others=alive.filter(p=>p.id!==S.playerId);
+  let h=`<div class="card"><h2>${ROLE_INFO[role].icon} Night Action</h2>`;
+  if(role==='werewolf'){
+    const wolves=alive.filter(p=>p.role==='werewolf'),targets=alive.filter(p=>p.role!=='werewolf');
+    if(wolves.length>1) h+=`<div class="msg-box" style="margin-bottom:8px">🐺 Wolves: ${wolves.filter(w=>w.id!==S.playerId).map(w=>w.name).join(', ')}</div>`;
+    h+=`<p style="color:#aaa;font-size:.9rem;margin-bottom:8px">Choose a victim:</p>
+    <div class="action-area"><ul class="player-select-list" id="targetList">${targets.map(p=>`<li onclick="sel('${p.id}')" id="t_${p.id}">${p.name}</li>`).join('')}</ul></div>
+    <button class="btn-primary" onclick="submitNight('werewolf_kill')">Kill</button>`;
+  } else if(role==='seer'){
+    h+=`<p style="color:#aaa;font-size:.9rem;margin-bottom:8px">Investigate:</p>
+    <div class="action-area"><ul class="player-select-list" id="targetList">${others.map(p=>`<li onclick="sel('${p.id}')" id="t_${p.id}">${p.name}</li>`).join('')}</ul></div>
+    <button class="btn-primary" onclick="submitNight('seer_check')">Investigate</button>`;
+  } else if(role==='doctor'){
+    h+=`<p style="color:#aaa;font-size:.9rem;margin-bottom:8px">Protect:</p>
+    <div class="action-area"><ul class="player-select-list" id="targetList">${alive.map(p=>`<li onclick="sel('${p.id}')" id="t_${p.id}">${p.name}${p.id===S.playerId?' (You)':''}</li>`).join('')}</ul></div>
+    <button class="btn-primary" onclick="submitNight('doctor_save')">Protect</button>`;
+  } else if(role==='witch'){
+    const victim=room.nightResult?.killed?room.players.find(p=>p.id===room.nightResult.killed):null;
+    if(!room.witchHealUsed&&victim) h+=`<div class="msg-box danger">Victim tonight: <b>${victim.name}</b></div>
+    <button class="btn-primary" style="background:#208b44;margin-top:8px" onclick="submitWitchHeal()">💊 Heal ${victim.name}</button>`;
+    if(!room.witchKillUsed) h+=`<p style="color:#aaa;font-size:.85rem;margin-top:12px;margin-bottom:6px">Kill:</p>
+    <div class="action-area"><ul class="player-select-list" id="killList">${others.map(p=>`<li onclick="selKill('${p.id}')" id="k_${p.id}">${p.name}</li>`).join('')}</ul></div>
+    <button class="btn-primary" style="background:#8b2020;margin-top:4px" onclick="submitWitchKill()">☠️ Kill</button>`;
+    h+=`<button class="btn-secondary" style="width:100%;margin-top:10px" onclick="skipNight()">Skip</button>`;
+  } else {
+    h+=`<div class="msg-box">No night action. Please wait<span class="waiting-dots"></span></div>
+    <button class="btn-primary" style="margin-top:10px" onclick="skipNight()">Confirm Wait</button>`;
+  }
+  h+=`</div>`;tc.innerHTML=h;
+  if(S.selectedTarget){const e=document.getElementById('t_'+S.selectedTarget);if(e)e.classList.add('selected');}
+}
+
+function renderWin(el){
+  const room=S.room,win=room?.winner;
+  el.innerHTML=`<h1>🐺 Werewolf</h1><div class="card"><div class="win-screen">
+  <div class="win-icon">${win==='villagers'?'🎉':'🐺'}</div>
+  <h2>${win==='villagers'?'Villagers Win!':'Werewolves Win!'}</h2>
+  <div class="card" style="text-align:left;margin-top:16px"><h2>Final Roles</h2><ul class="player-list">
+  ${room.players.map(p=>`<li><span class="status-dot ${p.alive?'':'dead'}"></span>${p.name} — <span class="role-tag ${p.role}">${ROLE_INFO[p.role]?.icon} ${ROLE_INFO[p.role]?.name}</span>${!p.alive?' ☠️':''}</li>`).join('')}
+  </ul></div><button class="btn-primary" onclick="location.href='/'">Play Again</button></div></div>`;
+}
+
+// ─── Actions ──────────────────────────────────────────────────────────────────
+function sel(id){S.selectedTarget=id;document.querySelectorAll('#targetList li').forEach(li=>li.classList.toggle('selected',li.id==='t_'+id));}
+function selKill(id){S.witchKillTarget=id;document.querySelectorAll('#killList li').forEach(li=>li.classList.toggle('selected',li.id==='k_'+id));}
+function selVote(id){S.voteTarget=id;document.querySelectorAll('#voteList li').forEach(li=>li.classList.toggle('selected',li.id==='v_'+id));}
+
+async function submitNight(type){
+  if(!S.selectedTarget){toast('Select a target!');return;}
+  const room=await loadRoom(S.roomId),me=room.players.find(p=>p.id===S.playerId);
+  if(!me||me.hasActed)return;
+  room.nightActions[S.playerId]={type,target:S.selectedTarget,actorId:S.playerId};
+  me.hasActed=true;S.selectedTarget=null;await saveRoom(room);S.room=room;
+  if(S.isHost)await advancePhase(room);render();
+}
+async function skipNight(){
+  const room=await loadRoom(S.roomId),me=room.players.find(p=>p.id===S.playerId);
+  if(!me||me.hasActed)return;me.hasActed=true;await saveRoom(room);S.room=room;
+  if(S.isHost)await advancePhase(room);render();
+}
+async function submitWitchHeal(){
+  const room=await loadRoom(S.roomId),me=room.players.find(p=>p.id===S.playerId);
+  if(!me||me.hasActed)return;
+  if(room.nightResult?.killed)room.nightActions[S.playerId+'_heal']={type:'witch_heal',target:room.nightResult.killed,actorId:S.playerId};
+  me.hasActed=true;await saveRoom(room);S.room=room;if(S.isHost)await advancePhase(room);render();
+}
+async function submitWitchKill(){
+  if(!S.witchKillTarget){toast('Select a target!');return;}
+  const room=await loadRoom(S.roomId),me=room.players.find(p=>p.id===S.playerId);
+  if(!me||me.hasActed)return;
+  room.nightActions[S.playerId+'_kill']={type:'witch_kill',target:S.witchKillTarget,actorId:S.playerId};
+  me.hasActed=true;S.witchKillTarget=null;await saveRoom(room);S.room=room;if(S.isHost)await advancePhase(room);render();
+}
+async function ackDay(){
+  if(!S.isHost)return;
+  const room=await loadRoom(S.roomId);
+  room.phase='day_vote';room.players.forEach(p=>p.hasActed=false);addLog(room,`☀️ Vote phase!`,'system');
+  await saveRoom(room);S.room=room;render();
+}
+async function submitVote(){
+  if(!S.voteTarget){toast('Select someone!');return;}
+  const room=await loadRoom(S.roomId),me=room.players.find(p=>p.id===S.playerId);
+  if(!me||me.hasActed)return;
+  room.voteActions[S.playerId]=S.voteTarget;me.hasActed=true;S.voteTarget=null;
+  await saveRoom(room);S.room=room;if(S.isHost)await advancePhase(room);render();
+}
+async function submitHunter(){
+  if(!S.selectedTarget){toast('Choose someone!');return;}
+  const room=await loadRoom(S.roomId),t=room.players.find(p=>p.id===S.selectedTarget);
+  if(t&&t.alive){t.alive=false;addLog(room,`🏹 Hunter took ${t.name} down!`,'death');}
+  room.hunterPending=null;const w=checkWin(room);
+  if(w){room.winner=w;room.phase='ended';}
+  else{room.phase='night_action';room.round++;room.players.forEach(p=>p.hasActed=false);addLog(room,`🌕 Night falls...`,'system');}
+  S.selectedTarget=null;await saveRoom(room);S.room=room;render();
+}
+
+async function createRoom(){
+  const name=document.getElementById('hostName').value.trim();if(!name){toast('Enter your name!');return;}
+  const cfg={};let total=0;
+  Object.keys(ROLE_INFO).forEach(role=>{const chk=document.getElementById('chk_'+role);if(chk?.checked){const c=parseInt(document.getElementById('cnt_'+role)?.value)||1;cfg[role]=c;total+=c;}});
+  if(total<3){toast('Need 3+ players!');return;}if(!cfg.werewolf){toast('Need a Werewolf!');return;}
+  if(cfg.werewolf>=total-cfg.werewolf){toast('Too many werewolves!');return;}
+  const pid=genId(10),room=defaultRoom(pid,name,cfg);await saveRoom(room);
+  S.roomId=room.id;S.playerId=pid;S.playerName=name;S.isHost=true;S.room=room;
+  window.history.pushState({},'',`/?room=${room.id}`);
+  S.view='lobby';startPolling();render();
+}
+
+async function joinRoom(){
+  const code=document.getElementById('joinCode').value.trim().toUpperCase();
+  const name=document.getElementById('joinName').value.trim();
+  if(!code){toast('Enter room code!');return;}if(!name){toast('Enter your name!');return;}
+  const room=await loadRoom(code);
+  if(!room){toast('Room not found!');return;}if(room.phase!=='lobby'){toast('Game already started!');return;}
+  const total=Object.values(room.roleConfig).reduce((a,b)=>a+b,0);
+  if(room.players.length>=total){toast('Room full!');return;}
+  if(room.players.find(p=>p.name.toLowerCase()===name.toLowerCase())){toast('Name taken!');return;}
+  const pid=genId(10);room.players.push({id:pid,name,alive:true,role:null,hasActed:false});
+  await saveRoom(room);S.roomId=room.id;S.playerId=pid;S.playerName=name;S.isHost=false;S.room=room;
+  S.view='lobby';startPolling();render();
+}
+
+async function startGame(){
+  const room=await loadRoom(S.roomId);
+  const total=Object.values(room.roleConfig).reduce((a,b)=>a+b,0);
+  if(room.players.length<total){toast(`Need ${total} players!`);return;}
+  await advancePhase(room);S.room=room;S.view='role_reveal';render();
+}
+
+function startPolling(){
+  if(S.pollTimer)clearInterval(S.pollTimer);
+  S.pollTimer=setInterval(async()=>{
+    const room=await loadRoom(S.roomId);if(!room)return;
+    const prev=S.room;S.room=room;
+    if(prev){
+      if(prev.phase==='lobby'&&room.phase!=='lobby'){S.view='role_reveal';render();return;}
+      if(room.winner&&!prev.winner){S.view='win';render();return;}
+      if(room.phase!==prev.phase){render();return;}
+      if(room.players.filter(p=>p.hasActed).length!==prev.players.filter(p=>p.hasActed).length)render();
+    }
+    if(S.isHost){
+      if(room.phase==='night_action'){const need=alivePlayers(room).filter(p=>needsNightAction(room,p));if(need.length&&need.every(p=>p.hasActed)){await advancePhase(room);S.room=room;render();}}
+      else if(room.phase==='day_vote'){if(alivePlayers(room).every(p=>p.hasActed)){await advancePhase(room);S.room=room;render();}}
+    }
+  },2500);
+}
+
+function copyLink(){const v=document.getElementById('shareLink')?.value;if(v)navigator.clipboard.writeText(v).then(()=>toast('Copied!'));}
+function goCreate(){S.view='create';render();}
+function goJoin(){S.view='join';render();}
+function toast(msg,dur=2200){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',dur);}
+
+const initParam=new URLSearchParams(window.location.search).get('room');
+if(initParam)S.view='join';
+render();
+</script>
+</body>
+</html>
