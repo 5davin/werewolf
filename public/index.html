@@ -497,21 +497,84 @@ async function startGame(){
 }
 
 function startPolling(){
-  if(S.pollTimer)clearInterval(S.pollTimer);
-  S.pollTimer=setInterval(async()=>{
-    const room=await loadRoom(S.roomId);if(!room)return;
-    const prev=S.room;S.room=room;
-    if(prev){
-      if(prev.phase==='lobby'&&room.phase!=='lobby'){S.view='role_reveal';render();return;}
-      if(room.winner&&!prev.winner){S.view='win';render();return;}
-      if(room.phase!==prev.phase){render();return;}
-      if(room.players.filter(p=>p.hasActed).length!==prev.players.filter(p=>p.hasActed).length)render();
+  if(state.pollTimer) clearInterval(state.pollTimer);
+
+  state.pollTimer = setInterval(async () => {
+    const room = await loadRoom(state.roomId);
+    if (!room) return;
+
+    const prev = state.room;
+    state.room = room;
+
+    if (prev) {
+      // Phase changes
+      if (prev.phase === 'lobby' && room.phase !== 'lobby') {
+        state.view = 'role_reveal';
+        render();
+        return;
+      }
+
+      if (room.phase === 'ended' && prev.phase !== 'ended') {
+        state.view = 'win';
+        render();
+        return;
+      }
+
+      if (room.phase !== prev.phase) {
+        render();
+        return;
+      }
+
+      // ✅ NEW: detect player join/leave
+      if (prev.players.length !== room.players.length) {
+        render();
+        return;
+      }
+
+      // ✅ NEW: detect player state changes (alive/dead etc)
+      const prevSnapshot = JSON.stringify(prev.players.map(p => ({
+        id: p.id,
+        alive: p.alive
+      })));
+
+      const currSnapshot = JSON.stringify(room.players.map(p => ({
+        id: p.id,
+        alive: p.alive
+      })));
+
+      if (prevSnapshot !== currSnapshot) {
+        render();
+        return;
+      }
+
+      // Existing action tracking
+      const prevActs = prev.players.filter(p => p.hasActed).length;
+      const curActs = room.players.filter(p => p.hasActed).length;
+
+      if (curActs !== prevActs) {
+        render();
+      }
     }
-    if(S.isHost){
-      if(room.phase==='night_action'){const need=alivePlayers(room).filter(p=>needsNightAction(room,p));if(need.length&&need.every(p=>p.hasActed)){await advancePhase(room);S.room=room;render();}}
-      else if(room.phase==='day_vote'){if(alivePlayers(room).every(p=>p.hasActed)){await advancePhase(room);S.room=room;render();}}
+
+    // Host auto-advance logic (unchanged)
+    if (state.isHost) {
+      if (room.phase === 'night_action') {
+        const need = alivePlayers(room).filter(p => needsNightAction(room, p));
+        if (need.length > 0 && need.every(p => p.hasActed)) {
+          await advancePhase(room);
+          state.room = room;
+          render();
+        }
+      } else if (room.phase === 'day_vote') {
+        if (alivePlayers(room).every(p => p.hasActed)) {
+          await advancePhase(room);
+          state.room = room;
+          render();
+        }
+      }
     }
-  },2500);
+
+  }, 1000); // faster refresh (was 2500)
 }
 
 function copyLink(){const v=document.getElementById('shareLink')?.value;if(v)navigator.clipboard.writeText(v).then(()=>toast('Copied!'));}
